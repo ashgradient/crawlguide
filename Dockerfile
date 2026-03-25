@@ -2,6 +2,7 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat python3 make g++
 COPY package*.json ./
+# Cache bust: install fresh (no --ignore-scripts so native modules compile)
 RUN npm install
 
 FROM node:22-alpine AS builder
