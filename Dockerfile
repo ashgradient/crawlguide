@@ -2,13 +2,15 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat python3 make g++
 COPY package*.json ./
-# Cache bust: install fresh (no --ignore-scripts so native modules compile)
+# Force NODE_ENV=development so devDependencies (tailwindcss, typescript) are installed
+ENV NODE_ENV=development
 RUN npm install
 
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+ENV NODE_ENV=development
 RUN npx prisma generate 2>/dev/null; npm run build
 
 FROM node:22-alpine
