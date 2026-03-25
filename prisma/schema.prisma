@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  VISITOR
+  ADMIN
+}
+
+enum Plan {
+  FREE
+  GROWTH
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  TRIALING
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  password      String?
+  image         String?
+  role          Role           @default(VISITOR)
+  emailVerified DateTime?
+  businesses    Business[]
+  checkIns      CheckIn[]
+  subscription  Subscription?
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Business {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  address     String
+  lat         Float?
+  lng         Float?
+  description String?
+  phone       String?
+  website     String?
+  category    String?
+  ownerId     String
+  owner       User        @relation(fields: [ownerId], references: [id])
+  routeStops  RouteStop[]
+  checkIns    CheckIn[]
+  createdRoutes Route[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Route {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  theme       String?
+  description String?
+  duration    Int?
+  distance    Float?
+  isPublic    Boolean     @default(true)
+  creatorId   String
+  creator     Business    @relation(fields: [creatorId], references: [id])
+  stops       RouteStop[]
+  checkIns    CheckIn[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model RouteStop {
+  id         String   @id @default(cuid())
+  routeId    String
+  route      Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  order      Int
+  duration   Int?
+  note       String?
+
+  @@unique([routeId, order])
+}
+
+model CheckIn {
+  id         String   @id @default(cuid())
+  visitorId  String?
+  visitor    User?    @relation(fields: [visitorId], references: [id])
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  routeId    String?
+  route      Route?   @relation(fields: [routeId], references: [id])
+  timestamp  DateTime @default(now())
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  userId           String             @unique
+  user             User               @relation(fields: [userId], references: [id])
+  stripeCustomerId String?
+  stripePriceId    String?
+  stripeSubId      String?
+  plan             Plan               @default(FREE)
+  status           SubscriptionStatus @default(TRIALING)
+  currentPeriodEnd DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
